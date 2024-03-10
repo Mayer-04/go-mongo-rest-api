@@ -2,38 +2,40 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func ConnectMongo() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
+func ConnectToMongoDB() *mongo.Collection {
 
-	uri := os.Getenv("MONGODB_URI")
+	// Get the MongoDB URI from the environment variable
+	const envMongoURI = "MONGODB_URI"
+
+	// Check if the environment variable is set
+	uri := os.Getenv(envMongoURI)
 	if uri == "" {
-		log.Fatal("You must set your 'MONGODB_URI' environment variable. See\n\t https://www.mongodb.com/docs/drivers/go/current/usage-examples/#environment-variable")
+		log.Fatal("MONGODB_URI environment variable is not set")
 	}
 
-	// Create a new client and connect to the server
+	// Create a new MongoDB client and connect
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
 
+	// Disconnect from MongoDB when the program exits
 	defer func() {
 		if err := client.Disconnect(context.TODO()); err != nil {
-			panic(err)
+			log.Fatalf("Failed to disconnect from MongoDB: %v", err)
 		}
 	}()
 
-	coll := client.Database("go_crud").Collection("users")
+	// Get the database and collection
+	db := client.Database("go_crud")
+	collection := db.Collection("users")
 
-	fmt.Println("Connected to MongoDB!", coll)
+	return collection
 }
