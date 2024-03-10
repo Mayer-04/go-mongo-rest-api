@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func ConnectToMongoDB() *mongo.Collection {
+func connectToMongoDB() *mongo.Client {
 
 	// Get the MongoDB URI from the environment variable
 	const envMongoURI = "MONGODB_URI"
@@ -33,7 +33,12 @@ func ConnectToMongoDB() *mongo.Collection {
 		}
 	}()
 
+	return client
+}
+
+func GetUsersCollection() *mongo.Collection {
 	// Get the database and collection
+	client := connectToMongoDB()
 	db := client.Database("go_crud")
 	collection := db.Collection("users")
 
