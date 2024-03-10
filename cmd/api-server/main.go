@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/Mayer-04/go-mongo-rest-api/internal/routes"
 	"github.com/joho/godotenv"
 )
 
@@ -22,14 +22,7 @@ func main() {
 		port = "3000"
 	}
 
-	mux.HandleFunc("GET /path/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "got path\n")
-	})
+	routes.Routes()
 
-	mux.HandleFunc("/task/{id}/", func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		fmt.Fprintf(w, "handling task with id=%v\n", id)
-	})
-
-	http.ListenAndServe("localhost:"+port, mux) //nolint", mux)
+	http.ListenAndServe("localhost:"+port, mux)
 }
