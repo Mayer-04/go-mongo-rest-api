@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	mux := http.NewServeMux()
+	app := http.NewServeMux()
 
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
@@ -22,7 +22,11 @@ func main() {
 		port = "3000"
 	}
 
-	routes.Routes()
+	userRoutes := routes.Routes(app)
 
-	http.ListenAndServe("localhost:"+port, mux)
+	app.Handle("api/user", userRoutes)
+
+	log.Println("Server is running on port:", port)
+
+	http.ListenAndServe("localhost:"+port, app)
 }

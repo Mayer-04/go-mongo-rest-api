@@ -7,15 +7,15 @@ import (
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Fprintf(w, "Get all users")
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/plain")
 
-	response, err := w.Write([]byte("Get all users"))
-
+	mensaje := "Obtener todos los usuarios"
+	_, err := w.Write([]byte(mensaje))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-
-	fmt.Println(response)
 }
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
