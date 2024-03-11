@@ -28,5 +28,9 @@ func main() {
 
 	log.Println("Server is running on port:", port)
 
-	http.ListenAndServe("localhost:"+port, app)
+	err := http.ListenAndServe("localhost:"+port, app)
+
+	if err != nil {
+		panic(err)
+	}
 }
