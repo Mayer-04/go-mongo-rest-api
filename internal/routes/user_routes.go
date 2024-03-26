@@ -6,18 +6,18 @@ import (
 	"github.com/Mayer-04/go-mongo-rest-api/internal/controllers"
 )
 
-func Routes(app *http.ServeMux) *http.ServeMux {
+func Routes(router *http.ServeMux) *http.ServeMux {
 
-	app.HandleFunc("GET /", controllers.GetUsers)
+	router.HandleFunc("GET /users", controllers.GetUsers)
 
-	app.HandleFunc("GET /{id}", controllers.GetUser)
+	router.HandleFunc("GET /users/{id}", controllers.GetUserByID)
 
-	app.HandleFunc("POST /", controllers.CreateUser)
+	router.HandleFunc("POST /users", controllers.CreateUser)
 
-	app.HandleFunc("PUT /{id}", controllers.UpdateUser)
+	router.HandleFunc("PUT /users/{id}", controllers.UpdateUser)
 
-	app.HandleFunc("DELETE /{id}", controllers.DeleteUser)
+	router.HandleFunc("DELETE /users/{id}", controllers.DeleteUser)
 
-	return app
+	return router
 
 }

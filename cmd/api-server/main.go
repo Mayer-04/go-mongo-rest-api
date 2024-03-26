@@ -24,7 +24,7 @@ func main() {
 
 	userRoutes := routes.Routes(app)
 
-	app.Handle("api/user", userRoutes)
+	app.Handle("/api/", http.StripPrefix("/api", userRoutes))
 
 	log.Println("Server is running on port:", port)
 
