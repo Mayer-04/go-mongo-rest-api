@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/Mayer-04/go-mongo-rest-api/internal/models"
 	"github.com/Mayer-04/go-mongo-rest-api/pkg/database"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // User represents a user in the database.
@@ -16,29 +18,57 @@ var user models.User
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "text/plain")
+	collection := database.GetUsersCollection()
 
-	mensaje := "Obtener todos los usuarios"
-	_, err := w.Write([]byte(mensaje))
+	var users []models.User
+
+	// Find all users - bson.M{} is an empty filter that returns all documents
+	cursor, err := collection.Find(context.Background(), bson.M{})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		log.Fatal(err)
 	}
+
+	// Close the cursor when the function returns
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		var user models.User
+		if err := cursor.Decode(&user); err != nil {
+			log.Fatal(err)
+		}
+		users = append(users, user)
+	}
+
+	// Set the response content type
+	w.Header().Set("Content-Type", "application/json")
+
+	// Set the response status code
+	w.WriteHeader(http.StatusOK)
+
+	// Write the user object to the response body
+	json.NewEncoder(w).Encode(users)
 }
 
 func GetUserByID(w http.ResponseWriter, r *http.Request) {
 	// Extract the user ID from the request path
 	userID := r.PathValue("id")
 
-	// Find the user in the database
-	filter := bson.D{{Key: "_id", Value: userID}}
-
 	// Get the collection
 	collection := database.GetUsersCollection()
 
+	// Convert the user ID to an ObjectID
+	objectID, err := primitive.ObjectIDFromHex(userID)
+
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// Find the user in the database - bson.D{{Key: "_id", Value: userID}}
+	filter := bson.M{"_id": objectID}
+
 	// Find the user
-	err := collection.FindOne(context.Background(), filter).Decode(&user)
+	err = collection.FindOne(context.Background(), filter).Decode(&user)
 
 	// Check if the user was found
 	if err != nil {
@@ -49,11 +79,12 @@ func GetUserByID(w http.ResponseWriter, r *http.Request) {
 	// Set the response content type
 	w.Header().Set("Content-Type", "application/json")
 
+	// Set the response status code
+	w.WriteHeader(http.StatusOK)
+
 	// Write the user object to the response body
 	json.NewEncoder(w).Encode(user)
 
-	// Set the response status code
-	w.WriteHeader(http.StatusOK)
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +104,11 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+
 	w.WriteHeader(http.StatusCreated)
+
+	json.NewEncoder(w).Encode(user)
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {

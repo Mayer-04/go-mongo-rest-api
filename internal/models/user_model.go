@@ -1,11 +1,7 @@
 package models
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
-
 // User represents a user in the database.
 type User struct {
-	// ID is the unique identifier of the user.
-	ID primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 
 	// Name is the name of the user.
 	Name string `json:"name,omitempty" bson:"name,omitempty"`
