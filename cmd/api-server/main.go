@@ -13,14 +13,10 @@ func main() {
 	app := http.NewServeMux()
 
 	if err := godotenv.Load(); err != nil {
-		log.Println("no .env file found")
+		log.Fatalf("no .env file found %v", err)
 	}
 
 	port := os.Getenv("PORT")
-
-	if port == "" {
-		port = "3000"
-	}
 
 	userRoutes := routes.Routes(app)
 

@@ -95,38 +95,39 @@ func GetUserByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	// Obtén la colección de usuarios de la base de datos
+	// Get user collection from database
 	collection := database.GetUsersCollection()
 
-	// Crea una nueva instancia de validator
+	// Create a new "validator" instance
 	validate := validator.New()
 
-	// Intenta decodificar el cuerpo de la solicitud en la variable user
+	// Try to decode the request body in the "user" variable
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Valida los datos del usuario
+	// Validate user data
 	if err := validate.Struct(user); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Intenta insertar el usuario en la base de datos
+	// Insert the user into the collection
+	// InsertOne returns an "InsertOneResult" with the inserted ID of the new document
 	_, err := collection.InsertOne(context.Background(), user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Establece el tipo de contenido de la respuesta
+	// Sets the content type of the response
 	w.Header().Set("Content-Type", "application/json")
 
-	// Establece el código de estado de la respuesta
+	// Set response status code
 	w.WriteHeader(http.StatusCreated)
 
-	// Codifica el usuario en la respuesta
+	// Encode the user in the response body
 	json.NewEncoder(w).Encode(user)
 }
 
@@ -140,35 +141,37 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Crea un filtro para buscar el usuario por su ID
+	// Create a filter to search for the user by their ID
 	filter := bson.M{"_id": userID}
 
-	// Crea un nuevo usuario con los datos actualizados
+	// Create a new user with updated data
 	var userUpdate models.User
 
-	// Decodifica el cuerpo de la solicitud en el nuevo usuario
+	// Decode the request body in the new user
 	err = json.NewDecoder(r.Body).Decode(&userUpdate)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Valida los datos del usuario
+	// Validate user data
 	if err := validator.Struct(userUpdate); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Crea un nuevo filtro para actualizar el usuario en la base de datos
+	// Create a new filter to update the user in the database
 	update := bson.M{"$set": userUpdate}
 
+	// "UpdateResult" contains the number of updated documents and an error
 	result, err := collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Verifica si se actualizo el usuario en la base de datos
+	// Check if the user was updated in the database
+	// Number of documents that match the filter, if it is 0 it is not updated
 	if result.ModifiedCount == 0 {
 		http.Error(w, "user not found", http.StatusNotFound)
 		return
@@ -193,6 +196,8 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.M{"_id": objectID}
 
+	// DeleteOne returns a "DeleteResult" with the number of documents deleted and an error
+	// If there are no matches to the filter, no document is deleted and "DeleteResult" is set to 0.
 	_, err = collection.DeleteOne(context.Background(), filter)
 
 	if err != nil {
