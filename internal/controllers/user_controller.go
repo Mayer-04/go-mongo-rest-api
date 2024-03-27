@@ -3,18 +3,24 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/Mayer-04/go-mongo-rest-api/internal/models"
 	"github.com/Mayer-04/go-mongo-rest-api/pkg/database"
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // User represents a user in the database.
 var user models.User
+
+type Response struct {
+	Success bool        `json:"success"`
+	Message string      `json:"message"`
+	Data    models.User `json:"data,omitempty"`
+}
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 
@@ -31,6 +37,7 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	// Close the cursor when the function returns
 	defer cursor.Close(context.Background())
 
+	// Iterate through the cursor and decode each user into the user variable
 	for cursor.Next(context.Background()) {
 		var user models.User
 		if err := cursor.Decode(&user); err != nil {
@@ -60,7 +67,7 @@ func GetUserByID(w http.ResponseWriter, r *http.Request) {
 	objectID, err := primitive.ObjectIDFromHex(userID)
 
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		http.Error(w, "invalid user ID", http.StatusBadRequest)
 		return
 	}
 
@@ -88,31 +95,88 @@ func GetUserByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
+	// Obtén la colección de usuarios de la base de datos
 	collection := database.GetUsersCollection()
 
-	w.Header().Set("Content-Type", "application/json")
+	// Crea una nueva instancia de validator
+	validate := validator.New()
 
+	// Intenta decodificar el cuerpo de la solicitud en la variable user
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	_, err := collection.InsertOne(context.Background(), user)
+	// Valida los datos del usuario
+	if err := validate.Struct(user); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
+	// Intenta insertar el usuario en la base de datos
+	_, err := collection.InsertOne(context.Background(), user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Establece el tipo de contenido de la respuesta
 	w.Header().Set("Content-Type", "application/json")
 
+	// Establece el código de estado de la respuesta
 	w.WriteHeader(http.StatusCreated)
 
+	// Codifica el usuario en la respuesta
 	json.NewEncoder(w).Encode(user)
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Update user")
+	collection := database.GetUsersCollection()
+	validator := validator.New()
+
+	userID, err := primitive.ObjectIDFromHex(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// Crea un filtro para buscar el usuario por su ID
+	filter := bson.M{"_id": userID}
+
+	// Crea un nuevo usuario con los datos actualizados
+	var userUpdate models.User
+
+	// Decodifica el cuerpo de la solicitud en el nuevo usuario
+	err = json.NewDecoder(r.Body).Decode(&userUpdate)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Valida los datos del usuario
+	if err := validator.Struct(userUpdate); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Crea un nuevo filtro para actualizar el usuario en la base de datos
+	update := bson.M{"$set": userUpdate}
+
+	result, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Verifica si se actualizo el usuario en la base de datos
+	if result.ModifiedCount == 0 {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(userUpdate)
 }
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -120,12 +184,28 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	userID := r.PathValue("id")
 
-	_, err := collection.DeleteOne(context.Background(), bson.M{"_id": userID})
+	objectID, err := primitive.ObjectIDFromHex(userID)
+
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "invalid user ID", http.StatusBadRequest)
 		return
 	}
 
+	filter := bson.M{"_id": objectID}
+
+	_, err = collection.DeleteOne(context.Background(), filter)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := Response{
+		Success: true,
+		Message: "user deleted successfully",
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }

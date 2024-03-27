@@ -20,7 +20,7 @@ func ConnectToMongoDB() *mongo.Client {
 	// Check if the environment variable is set
 	var uri string = os.Getenv(envMongoURI)
 	if uri == "" {
-		log.Fatal("you must set your 'MONGODB_URI' environment variable.")
+		log.Fatal("you must set your 'MONGODB_URI' environment variable")
 	}
 
 	// MongoDB client options
